@@ -24,6 +24,22 @@ abstract class QuickCheckHeap extends Properties("Heap") with IntHeap {
     isEmpty(deleteMin(h))
   }
   
+  property("findMin, deleteMin -> ordered elements") = forAll { l: List[Int] =>
+    l.sorted == minElements(genHeapFromList(l))
+  }
+  
+  property("findMin of melded heaps") = forAll { (h1: H, h2: H) =>
+    val melded = meld(h1, h2)
+    val meldedMin = findMin(melded)
+    meldedMin == findMin(h1) || meldedMin == findMin(h2) 
+  }
+  
+  def genHeapFromList(l: List[Int]): H = l match {
+    case Nil => empty
+    case t::ts => insert(t, genHeapFromList(ts))
+  }
+    
+  
   def minElements(h: H): List[A] =
     if (isEmpty(h)) Nil
     else findMin(h)::minElements(deleteMin(h)) 
@@ -34,9 +50,4 @@ abstract class QuickCheckHeap extends Properties("Heap") with IntHeap {
   } yield insert(k, h)
 
   implicit lazy val arbHeap: Arbitrary[H] = Arbitrary(genHeap)
-
-  property("findMin, deleteMin -> ordered elements") = forAll { h: H => 
-  	val minList = minElements(h)
-  	minList.sorted == minList              
-  }
 }
