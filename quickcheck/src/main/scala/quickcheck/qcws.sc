@@ -2,14 +2,14 @@ package quickcheck
 
 object qcws {
   println("Welcome to the Scala worksheet")       //> Welcome to the Scala worksheet
-  val b1 = (new QuickCheckHeap with Bogus1BinomialHeap)
-                                                  //> b1  : quickcheck.QuickCheckHeap with quickcheck.Bogus1BinomialHeap = Prop
-  b1.insert(3, Nil)                               //> res0: quickcheck.qcws.b1.H = List(Node(3,0,List()))
-  val b2 = b1.insert(0, b1.insert(3, Nil))        //> b2  : quickcheck.qcws.b1.H = List(Node(0,1,List(Node(3,0,List()))))
+  val qc = (new QuickCheckHeap with BinomialHeap) //> qc  : quickcheck.QuickCheckHeap with quickcheck.BinomialHeap = Prop
+//  val b3 = (new QuickCheckHeap with Bogus3BinomialHeap)
+  val h3_3 = qc.insert(3, Nil)                    //> h3_3  : quickcheck.qcws.qc.H = List(Node(3,0,List()))
+  val h = qc.insert(4, qc.insert(0, h3_3))        //> h  : quickcheck.qcws.qc.H = List(Node(4,0,List()), Node(0,1,List(Node(3,0,Li
+                                                  //| st()))))
   
-  b1.findMin(b2)                                  //> res1: quickcheck.qcws.b1.A = 0
+  val s = qc.genHeap.sample                       //> s  : Option[quickcheck.qcws.qc.H] = Some(List(Node(1925878216,0,List())))
+  val minList = qc.minElements(s.getOrElse(Nil))  //> minList  : List[quickcheck.qcws.qc.A] = List(1925878216)
+  minList.sorted == minList                       //> res0: Boolean = true
   
-  b2 match {
-    case t::ts => t
-  }                                               //> res2: quickcheck.qcws.b1.Node = Node(0,1,List(Node(3,0,List())))
 }
