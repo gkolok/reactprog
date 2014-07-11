@@ -7,7 +7,7 @@ class Wire {
   private var actions: List[Simulator#Action] = List()
 
   def getSignal: Boolean = sigVal
-  
+
   def setSignal(s: Boolean) {
     if (s != sigVal) {
       sigVal = s
@@ -19,6 +19,9 @@ class Wire {
     actions = a :: actions
     a()
   }
+  
+  override 
+  def toString = sigVal.toString 
 }
 
 abstract class CircuitSimulator extends Simulator {
@@ -29,10 +32,11 @@ abstract class CircuitSimulator extends Simulator {
 
   def probe(name: String, wire: Wire) {
     wire addAction {
-      () => afterDelay(0) {
-        println(
-          "  " + currentTime + ": " + name + " -> " +  wire.getSignal)
-      }
+      () =>
+        afterDelay(0) {
+          println(
+            "  " + currentTime + ": " + name + " -> " + wire.getSignal)
+        }
     }
   }
 
@@ -59,17 +63,45 @@ abstract class CircuitSimulator extends Simulator {
   //
 
   def orGate(a1: Wire, a2: Wire, output: Wire) {
-    ???
+    def orAction() {
+      val a1Sig = a1.getSignal
+      val a2Sig = a2.getSignal
+      afterDelay(OrGateDelay) { output.setSignal(a1Sig | a2Sig) }
+    }
+    a1 addAction orAction
+    a2 addAction orAction
+  }
+
+  def orGate2(a1: Wire, a2: Wire, output: Wire) {
+    val na1, na2, noutput = new Wire
+    inverter(a1, na1)
+    inverter(a2, na2)
+    andGate(na1, na2, noutput)
+    inverter(noutput, output)
+  }
+
+  def demux1(in: Wire, c: Wire, out1: Wire, out2: Wire) {
+    val nc = new Wire();
+    andGate(c, in, out1)
+    inverter(c, nc)
+    andGate(nc, in, out2)
   }
   
-  def orGate2(a1: Wire, a2: Wire, output: Wire) {
-    ???
+  def wire(in: Wire, out: Wire) {
+    in addAction { () => afterDelay(0) {out.setSignal(in.getSignal)}  }
   }
 
   def demux(in: Wire, c: List[Wire], out: List[Wire]) {
-    ???
+    c match {
+      case Nil =>
+      case cn :: cs =>
+        val (outList1, outList2) = out.splitAt(Math.pow(2, c.size - 1).toInt)
+        val out1, out2 = new Wire()
+        demux1(in, cn, out1, out2)
+        demux(out1, cs, outList1)
+        demux(out2, cs, outList2)
+    }
   }
-
 }
 
 object Circuit extends CircuitSimulator {
