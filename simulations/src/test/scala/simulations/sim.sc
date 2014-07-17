@@ -18,8 +18,14 @@ object sim {
   val c = 3                                       //> c  : Int = 3
   l.splitAt((Math.pow(2, c - 1)).toInt)           //> res0: (List[Int], List[Int]) = (List(3, 2, 1, 0),List(3, 2, 1, 0))
 
-  val cc = new CircuitCheck                       //> cc  : simulations.CircuitCheck = Prop
-  
-  cc.genWire.sample                               //> res1: Option[simulations.Wire] = Some(false)
+  val cc = new CircuitSuite                       //> cc  : simulations.CircuitSuite = simulations.CircuitSuite@2a17b7b6
+
+  cc.genWire.sample                               //> res1: Option[simulations.Wire] = Some(0)
+  val Some(ws) = cc.genLimitedWireList.sample     //> ws  : List[simulations.Wire] = List(1, 1, 0)
+  cc.toInt(ws)                                    //> res2: Int = 3
+  // cc.genControlList.sample
+}
+
+case class MyMon[T](t: T) {
   
 }

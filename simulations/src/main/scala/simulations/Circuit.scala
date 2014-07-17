@@ -21,7 +21,7 @@ class Wire {
   }
   
   override 
-  def toString = sigVal.toString 
+  def toString = if (getSignal) "1" else "0" 
 }
 
 abstract class CircuitSimulator extends Simulator {
@@ -94,9 +94,11 @@ abstract class CircuitSimulator extends Simulator {
   def demux(in: Wire, c: List[Wire], out: List[Wire]) {
     c match {
       case Nil =>
+        if (out.size > 1) throw new Error("out size must be exactly 1 if control list is empty.")
+        wire(in, out.head)
       case cn :: cs =>
-        val (outList1, outList2) = out.splitAt(Math.pow(2, c.size - 1).toInt)
         val out1, out2 = new Wire()
+        val (outList1, outList2) = out.splitAt(Math.pow(2, c.size - 1).toInt)
         demux1(in, cn, out1, out2)
         demux(out1, cs, outList1)
         demux(out2, cs, outList2)
@@ -129,9 +131,21 @@ object Circuit extends CircuitSimulator {
   //
   // to complete with orGateExample and demuxExample...
   //
+  
+  def demuxExample {
+    val in, c, out1, out2 = new Wire
+    demux(in, List(c), List(out1, out2))
+    probe ("in", in)
+    probe("c", c)
+    probe("out1", out1)
+    probe("out2", out2)
+    in.setSignal(true)
+    c.setSignal(false)
+    run
+  }
 }
 
 object CircuitMain extends App {
   // You can write tests either here, or better in the test class CircuitSuite.
-  Circuit.andGateExample
+  Circuit.demuxExample
 }
