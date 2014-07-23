@@ -1,12 +1,15 @@
 package simulations
 
 import org.scalatest.FunSuite
-
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
+import org.scalatest.prop.PropertyChecks
+import org.scalatest.matchers.ShouldMatchers
+import org.mockito.internal.matchers.LessThan
+import org.mockito.internal.matchers.GreaterThan
 
 @RunWith(classOf[JUnitRunner])
-class EpidemySuite extends FunSuite {
+class EpidemySuite extends FunSuite with ShouldMatchers{
 
   test("prevalence rate"){
     val prevalenceRate = 0.01
@@ -98,5 +101,15 @@ class EpidemySuite extends FunSuite {
       infectedTimes = infectedTimes + (if(healthyPerson.infected) 1 else 0)
 	  }
 	  assert(infectedTimes > 0, "A person should get infected according to the transmissibility rate when he moves into a room with an infectious person")
+  }
+  
+  test("doWithProb"){
+    val es = new EpidemySimulator
+    val prob = 0.33
+    var counter: Double = 0.0
+  	for(i <- 1 to 1000) {es.withProbability(prob) {counter = counter + 1}}
+    val actRate: Double = counter / 1000
+  	actRate should be < prob + 0.1
+  	actRate should be > prob - 0.1
   }
 }
