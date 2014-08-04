@@ -54,12 +54,22 @@ trait NodeScala {
     val listenerSubscription = listener.start
     Future.run() { ct: CancellationToken =>
       Future {
+        processNextRequest(listener, ct, handler)
         while (ct.nonCancelled) {
-          listener.nextRequest.onSuccess {
-            case (req, exchange) => respond(exchange, ct, handler(req))
-          }
+          blocking(Thread.sleep(100))
         }
         listenerSubscription.unsubscribe
+      }
+    }
+  }
+
+  def processNextRequest(listener: Listener, ct: CancellationToken, handler: Request => Response) {
+    listener.nextRequest.onSuccess {
+      case (req, exchange) => {
+        if (ct.nonCancelled) {
+          processNextRequest(listener, ct, handler)
+          respond(exchange, ct, handler(req))
+        }
       }
     }
   }
