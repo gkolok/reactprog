@@ -14,7 +14,7 @@ object Main {
     //    and have the response return headers of the request
     val myServer = new NodeScala.Default(8080)
     val myServerSubscription = myServer.start("/test") { 
-    		req => (1 to 3).map(i => {blocking { println("this respond takes a while..."); Thread.sleep(3000)}; s"$i line<br/>"}).iterator
+    		req => (1 to 3).map(i => {blocking { println(s"this respond takes a while...$i"); Thread.sleep(3000)}; s"$i line<br/>"}).iterator
   	}
 
 //    // TO IMPLEMENT

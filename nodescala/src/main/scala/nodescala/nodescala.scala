@@ -4,6 +4,7 @@ import com.sun.net.httpserver._
 import scala.concurrent._
 import scala.concurrent.duration._
 import ExecutionContext.Implicits.global
+import scala.language.postfixOps
 import scala.async.Async.{ async, await }
 import scala.collection._
 import scala.collection.JavaConversions._
@@ -54,22 +55,11 @@ trait NodeScala {
     val listenerSubscription = listener.start
     Future.run() { ct: CancellationToken =>
       Future {
-        processNextRequest(listener, ct, handler)
         while (ct.nonCancelled) {
-          blocking(Thread.sleep(100))
+        	val (req, exchange) = Await.result(listener.nextRequest, 100 second)
+        	async {	respond(exchange, ct, handler(req)) }
         }
         listenerSubscription.unsubscribe
-      }
-    }
-  }
-
-  def processNextRequest(listener: Listener, ct: CancellationToken, handler: Request => Response) {
-    listener.nextRequest.onSuccess {
-      case (req, exchange) => {
-        if (ct.nonCancelled) {
-          processNextRequest(listener, ct, handler)
-          respond(exchange, ct, handler(req))
-        }
       }
     }
   }
