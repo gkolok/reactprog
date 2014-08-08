@@ -1,19 +1,15 @@
 package suggestions
 
-
-
 import language.postfixOps
 import scala.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.{Try, Success, Failure}
+import scala.util.{ Try, Success, Failure }
 import rx.lang.scala._
 import org.scalatest._
 import gui._
-
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-
 
 @RunWith(classOf[JUnitRunner])
 class WikipediaApiTest extends FunSuite {
@@ -46,9 +42,17 @@ class WikipediaApiTest extends FunSuite {
         count += 1
       },
       t => assert(false, s"stream error $t"),
-      () => completed = true
-    )
+      () => completed = true)
     assert(completed && count == 3, "completed: " + completed + ", event count: " + count)
+  }
+
+  test("WikipediaApi should correctly use Recovered") {
+    val recovered = Observable(1, 2, 3).map(n => if (n == 2) throw new Error() else n).recovered
+    var tries = Seq[Try[Int]]()
+    recovered.toSeq.subscribe(
+        { t => tries = t }, 
+        { e => println(e)})
+    assert(tries === Seq(Try(1), Failure(new Error()), Try(3)))
   }
 
   test("WikipediaApi should correctly use concatRecovered") {

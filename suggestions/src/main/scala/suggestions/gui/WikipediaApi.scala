@@ -10,8 +10,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.{ Try, Success, Failure }
 import rx.subscriptions.CompositeSubscription
 import rx.lang.scala.Observable
+import rx.lang.scala.Notification
+import Notification._
 import observablex._
 import search._
+import scala.util.Failure
 
 trait WikipediaApi {
 
@@ -37,7 +40,7 @@ trait WikipediaApi {
      *
      * E.g. `"erik", "erik meijer", "martin` should become `"erik", "erik_meijer", "martin"`
      */
-    def sanitized: Observable[String] = ???
+    def sanitized: Observable[String] = obs.map {_.map {c => if (c == ' ') '_' else c}}
 
   }
 
@@ -48,7 +51,10 @@ trait WikipediaApi {
      *
      * E.g. `1, 2, 3, !Exception!` should become `Success(1), Success(2), Success(3), Failure(Exception), !TerminateStream!`
      */
-    def recovered: Observable[Try[T]] = ???
+    def recovered: Observable[Try[T]] = obs.materialize.map({
+      case OnNext(v) => Success(v)
+      case OnError(err) => Failure(err)
+    })
 
     /** Emits the events from the `obs` observable, until `totalSec` seconds have elapsed.
      *
