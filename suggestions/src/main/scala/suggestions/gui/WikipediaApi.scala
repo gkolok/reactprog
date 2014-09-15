@@ -15,38 +15,49 @@ import Notification._
 import observablex._
 import search._
 import scala.util.Failure
+import rx.lang.scala.subjects.PublishSubject
+import rx.lang.scala.subjects.ReplaySubject
+import rx.lang.scala.concurrency.Schedulers
 
 trait WikipediaApi {
 
-  /** Returns a `Future` with a list of possible completions for a search `term`.
+  /**
+   * Returns a `Future` with a list of possible completions for a search `term`.
    */
   def wikipediaSuggestion(term: String): Future[List[String]]
 
-  /** Returns a `Future` with the contents of the Wikipedia page for the given search `term`.
+  /**
+   * Returns a `Future` with the contents of the Wikipedia page for the given search `term`.
    */
   def wikipediaPage(term: String): Future[String]
 
-  /** Returns an `Observable` with a list of possible completions for a search `term`.
+  /**
+   * Returns an `Observable` with a list of possible completions for a search `term`.
    */
   def wikiSuggestResponseStream(term: String): Observable[List[String]] = ObservableEx(wikipediaSuggestion(term))
 
-  /** Returns an `Observable` with the contents of the Wikipedia page for the given search `term`.
+  /**
+   * Returns an `Observable` with the contents of the Wikipedia page for the given search `term`.
    */
   def wikiPageResponseStream(term: String): Observable[String] = ObservableEx(wikipediaPage(term))
 
   implicit class StringObservableOps(obs: Observable[String]) {
 
-    /** Given a stream of search terms, returns a stream of search terms with spaces replaced by underscores.
+    /**
+     * Given a stream of search terms, returns a stream of search terms with spaces replaced by underscores.
      *
      * E.g. `"erik", "erik meijer", "martin` should become `"erik", "erik_meijer", "martin"`
      */
-    def sanitized: Observable[String] = obs.map {_.map {c => if (c == ' ') '_' else c}}
+    def sanitized: Observable[String] = obs.map { _.map { c => if (c == ' ') '_' else c } }
 
   }
 
+  case object StreamTerminated extends Exception
+
   implicit class ObservableOps[T](obs: Observable[T]) {
 
-    /** Given an observable that can possibly be completed with an error, returns a new observable
+    /**
+     * Given an observable that can possibly be completed with an error, returns a new observable
      * with the same values wrapped into `Success` and the potential error wrapped into `Failure`.
      *
      * E.g. `1, 2, 3, !Exception!` should become `Success(1), Success(2), Success(3), Failure(Exception), !TerminateStream!`
@@ -54,18 +65,37 @@ trait WikipediaApi {
     def recovered: Observable[Try[T]] = obs.materialize.map({
       case OnNext(v) => Success(v)
       case OnError(err) => Failure(err)
+      case OnCompleted() => Failure(StreamTerminated)
+    }).filter({
+      case Failure(StreamTerminated) => false
+      case _ => true
     })
 
-    /** Emits the events from the `obs` observable, until `totalSec` seconds have elapsed.
+    /**
+     * Emits the events from the `obs` observable, until `totalSec` seconds have elapsed.
      *
      * After `totalSec` seconds, if `obs` is not yet completed, the result observable becomes completed.
      *
      * Note: uses the existing combinators on observables.
      */
-    def timedOut(totalSec: Long): Observable[T] = ???
+    def timedOut(totalSec: Long): Observable[T] = {
+      val subject = ReplaySubject[T]()
 
+      val subscription = obs.subscribeOn(Schedulers.newThread).subscribe(
+        v => subject.onNext(v),
+        err => subject.onError(err),
+        () => subject.onCompleted)
 
-    /** Given a stream of events `obs` and a method `requestMethod` to map a request `T` into
+      Future {
+        Thread.sleep(totalSec * 1000)
+        subscription.unsubscribe
+        subject.onCompleted
+      }
+      subject
+    }
+
+    /**
+     * Given a stream of events `obs` and a method `requestMethod` to map a request `T` into
      * a stream of responses `S`, returns a stream of all the responses wrapped into a `Try`.
      * The elements of the response stream should reflect the order of their corresponding events in `obs`.
      *
@@ -90,7 +120,9 @@ trait WikipediaApi {
      *
      * Observable(Success(1), Succeess(1), Succeess(1), Succeess(2), Succeess(2), Succeess(2), Succeess(3), Succeess(3), Succeess(3))
      */
-    def concatRecovered[S](requestMethod: T => Observable[S]): Observable[Try[S]] = ???
+    def concatRecovered[S](requestMethod: T => Observable[S]): Observable[Try[S]] = {
+      obs.map(requestMethod(_).recovered).flatten
+    }
 
   }
 
